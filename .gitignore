@@ -1,0 +1,67 @@
+# ============================================================================
+# Git Ignore for rmhogcapi Azure Function App
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Azure Functions
+.python_packages/
+.venv/
+venv/
+env/
+ENV/
+
+# Local settings (contains secrets)
+local.settings.json
+
+# Azure Functions Core Tools
+bin/
+obj/
+.vscode/
+.vs/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.bak

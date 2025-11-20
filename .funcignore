@@ -1,0 +1,53 @@
+# ============================================================================
+# Azure Functions Deployment Ignore
+# ============================================================================
+# Files and directories to exclude from deployment
+# CRITICAL: Do NOT use */ wildcard - it breaks folder imports!
+# ============================================================================
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.vs
+.idea
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+tests
+test_*.py
+
+# Documentation (exclude from deployment)
+*.md
+!README.md
+docs_claude
+
+# Local settings
+local.settings.json
+.env
+.env.local
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+.DS_Store
+
+# Build artifacts
+build
+dist
+*.egg-info

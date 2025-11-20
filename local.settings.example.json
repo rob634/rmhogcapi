@@ -1,0 +1,31 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+
+    "_comment_postgres": "PostgreSQL Connection Settings",
+    "POSTGIS_HOST": "rmhpgflex.postgres.database.azure.com",
+    "POSTGIS_PORT": "5432",
+    "POSTGIS_DATABASE": "geopgflex",
+    "POSTGIS_USER": "rob634",
+    "POSTGIS_PASSWORD": "YOUR_PASSWORD_HERE",
+    "USE_MANAGED_IDENTITY": "false",
+
+    "_comment_ogc": "OGC Features API Configuration",
+    "OGC_SCHEMA": "geo",
+    "OGC_GEOMETRY_COLUMN": "geom",
+    "OGC_DEFAULT_LIMIT": "100",
+    "OGC_MAX_LIMIT": "10000",
+    "OGC_DEFAULT_PRECISION": "6",
+    "OGC_ENABLE_VALIDATION": "true",
+    "OGC_QUERY_TIMEOUT": "30",
+
+    "_comment_optional": "Optional Settings",
+    "OGC_BASE_URL": ""
+  },
+  "Host": {
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}

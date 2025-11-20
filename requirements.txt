@@ -1,0 +1,22 @@
+# ============================================================================
+# Python Dependencies for rmhogcapi
+# ============================================================================
+# Azure Functions & PostgreSQL OGC Features API Service
+# Last Updated: 19 NOV 2025
+# ============================================================================
+
+# Azure Functions Runtime
+azure-functions>=1.18.0
+
+# PostgreSQL Database Access
+psycopg[binary]>=3.1.0
+
+# Data Validation & Configuration
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Azure Managed Identity Support (for future use)
+azure-identity>=1.15.0
+
+# Logging and Monitoring
+azure-monitor-opentelemetry>=1.2.0
