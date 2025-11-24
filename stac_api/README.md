@@ -1,6 +1,5 @@
 # STAC API Implementation
 
-**Author**: Robert and Geospatial Claude Legion
 **Date**: 10 NOV 2025
 **Version**: 1.0.0
 **Status**: Production Ready - Phase 1 Complete
@@ -680,7 +679,6 @@ Part of rmhgeoapi project - Internal use only.
 
 ## Authors
 
-**Robert and Geospatial Claude Legion**
 Date: 10 NOV 2025
 
 For questions or issues, refer to main project documentation (CLAUDE.md).

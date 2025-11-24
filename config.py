@@ -3,7 +3,7 @@
 # ============================================================================
 # STATUS: Core Infrastructure - Configuration Management
 # PURPOSE: Centralized configuration for PostgreSQL connection with managed identity support
-# LAST_REVIEWED: 19 NOV 2025
+# LAST_REVIEWED: Current
 # EXPORTS: get_postgres_connection_string, AppConfig
 # DEPENDENCIES: pydantic-settings, azure-identity
 # SOURCE: Environment variables, Azure managed identity
@@ -23,10 +23,16 @@ Authentication Modes:
        - Requires: POSTGIS_HOST, POSTGIS_USER, POSTGIS_PASSWORD
        - Use when: USE_MANAGED_IDENTITY=false or not set
 
-    2. Managed Identity (Azure production):
-       - Requires: System-assigned managed identity enabled
+    2. User-Assigned Managed Identity (Azure production - RECOMMENDED):
+       - Requires: AZURE_CLIENT_ID set to the managed identity's client ID
+       - Requires: POSTGIS_USER set to the managed identity name (e.g., rmhtitileridentity)
        - Use when: USE_MANAGED_IDENTITY=true
        - Eliminates need for password storage
+       - Allows sharing identity across multiple apps (TiTiler, rmhogcapi, etc.)
+
+    3. System-Assigned Managed Identity (Azure - fallback):
+       - No AZURE_CLIENT_ID needed (uses the app's own identity)
+       - Use when: USE_MANAGED_IDENTITY=true and AZURE_CLIENT_ID is not set
 
 Usage:
     from config import get_postgres_connection_string
@@ -40,8 +46,8 @@ import logging
 from typing import Optional
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +63,17 @@ class AppConfig(BaseSettings):
         postgis_host: PostgreSQL server hostname
         postgis_port: PostgreSQL server port
         postgis_database: Database name
-        postgis_user: Database username
+        postgis_user: Database username (or managed identity name when using MI)
         postgis_password: Database password (optional with managed identity)
         use_managed_identity: Enable Azure managed identity authentication
+        azure_client_id: Client ID of user-assigned managed identity (optional)
     """
 
     # PostgreSQL Connection
     postgis_host: str = Field(..., description="PostgreSQL hostname")
     postgis_port: int = Field(default=5432, description="PostgreSQL port")
     postgis_database: str = Field(..., description="Database name")
-    postgis_user: str = Field(..., description="Database username")
+    postgis_user: str = Field(..., description="Database username or managed identity name")
     postgis_password: Optional[str] = Field(default=None, description="Database password")
 
     # Authentication Mode
@@ -75,19 +82,27 @@ class AppConfig(BaseSettings):
         description="Use Azure managed identity for authentication"
     )
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    # User-Assigned Managed Identity (optional - for shared identity across apps)
+    azure_client_id: Optional[str] = Field(
+        default=None,
+        description="Client ID of user-assigned managed identity (e.g., rmhtitileridentity)"
+    )
 
-    @validator('postgis_password')
-    def validate_password(cls, v, values):
+    # Pydantic v2 configuration (replaces inner Config class)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore"  # Ignore extra env vars not defined in model
+    )
+
+    @model_validator(mode='after')
+    def validate_auth_config(self):
         """Ensure password is provided when not using managed identity."""
-        use_managed_identity = values.get('use_managed_identity', False)
-        if not use_managed_identity and not v:
+        if not self.use_managed_identity and not self.postgis_password:
             raise ValueError(
                 "POSTGIS_PASSWORD is required when USE_MANAGED_IDENTITY=false"
             )
-        return v
+        return self
 
 
 @lru_cache(maxsize=1)
@@ -170,8 +185,9 @@ def _build_managed_identity_connection_string(config: AppConfig) -> str:
     """
     Build managed identity connection string with Azure AD token.
 
-    This function acquires an Azure AD access token using the system-assigned
-    managed identity and constructs a connection string with the token as password.
+    Supports both user-assigned and system-assigned managed identities:
+    - User-assigned: Set AZURE_CLIENT_ID to the identity's client ID
+    - System-assigned: Leave AZURE_CLIENT_ID unset (uses app's own identity)
 
     Args:
         config: Application configuration
@@ -186,21 +202,35 @@ def _build_managed_identity_connection_string(config: AppConfig) -> str:
         Token is acquired synchronously and has limited lifetime (~1 hour).
         For long-running connections, consider implementing token refresh.
     """
-    logger.info(f"Building managed identity connection string for {config.postgis_host}")
-
     try:
-        from azure.identity import DefaultAzureCredential
+        from azure.identity import ManagedIdentityCredential, DefaultAzureCredential
+        from urllib.parse import quote_plus
+
+        # Determine which credential to use
+        if config.azure_client_id:
+            # User-assigned managed identity (shared across apps like TiTiler, rmhogcapi)
+            logger.info(f"Using user-assigned managed identity: {config.azure_client_id}")
+            credential = ManagedIdentityCredential(client_id=config.azure_client_id)
+        else:
+            # System-assigned managed identity (fallback)
+            logger.info("Using system-assigned managed identity (no AZURE_CLIENT_ID set)")
+            credential = DefaultAzureCredential()
+
+        logger.info(f"Acquiring token for PostgreSQL connection to {config.postgis_host}")
 
         # Acquire Azure AD token for PostgreSQL
         # Scope for Azure Database for PostgreSQL: https://ossrdbms-aad.database.windows.net/.default
-        credential = DefaultAzureCredential()
         token = credential.get_token("https://ossrdbms-aad.database.windows.net/.default")
 
-        logger.info("✅ Successfully acquired managed identity token")
+        logger.info(f"Successfully acquired managed identity token for user: {config.postgis_user}")
+
+        # URL-encode the token (it may contain special characters)
+        encoded_token = quote_plus(token.token)
 
         # Build connection string with token as password
+        # POSTGIS_USER should be the managed identity name (e.g., rmhtitileridentity)
         conn_string = (
-            f"postgresql://{config.postgis_user}:{token.token}"
+            f"postgresql://{config.postgis_user}:{encoded_token}"
             f"@{config.postgis_host}:{config.postgis_port}"
             f"/{config.postgis_database}"
             f"?sslmode=require"
@@ -216,9 +246,11 @@ def _build_managed_identity_connection_string(config: AppConfig) -> str:
         )
     except Exception as e:
         logger.error(f"Failed to acquire managed identity token: {e}")
+        identity_type = "user-assigned" if config.azure_client_id else "system-assigned"
         raise Exception(
-            f"Managed identity authentication failed: {e}. "
-            "Ensure system-assigned managed identity is enabled and has database permissions."
+            f"Managed identity authentication failed ({identity_type}): {e}. "
+            f"Ensure the managed identity is assigned to the app and has database permissions. "
+            f"POSTGIS_USER should be set to the managed identity name in PostgreSQL."
         )
 
 
@@ -272,15 +304,20 @@ def validate_configuration() -> bool:
         logger.info(f"  Database: {config.postgis_database}")
         logger.info(f"  User: {config.postgis_user}")
         logger.info(f"  Managed Identity: {config.use_managed_identity}")
+        if config.use_managed_identity:
+            if config.azure_client_id:
+                logger.info(f"  Identity Type: User-assigned (client_id: {config.azure_client_id})")
+            else:
+                logger.info("  Identity Type: System-assigned")
 
         # Test connection string generation
         conn_string = get_postgres_connection_string()
-        logger.info("✅ Connection string generated successfully")
+        logger.info("Connection string generated successfully")
 
         return True
 
     except Exception as e:
-        logger.error(f"❌ Configuration validation failed: {e}")
+        logger.error(f"Configuration validation failed: {e}")
         raise
 
 

@@ -1,67 +1,35 @@
 # rmhogcapi - Geospatial API Service
 
-**Azure Function App for Standards-Compliant Geospatial Data Access**
+**Standards-compliant OGC Features & STAC APIs for Azure PostgreSQL**
+
+[![Azure Functions](https://img.shields.io/badge/Azure-Functions-blue)](https://azure.microsoft.com/en-us/services/functions/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![OGC API](https://img.shields.io/badge/OGC-API--Features-green)](https://docs.ogc.org/is/17-069r4/17-069r4.html)
+[![STAC](https://img.shields.io/badge/STAC-v1.0.0-green)](https://github.com/radiantearth/stac-api-spec)
 
 ---
 
-## Overview
+## What is rmhogcapi?
 
-rmhogcapi is a dedicated Azure Function App serving two standards-compliant geospatial APIs for read-only data access:
+rmhogcapi is a dedicated Azure Function App that serves geospatial data through two standards-compliant REST APIs:
 
-1. **OGC API - Features Core 1.0**: Vector feature access from PostGIS
-2. **STAC API v1.0.0**: SpatioTemporal Asset Catalog for raster and vector metadata
+- **OGC API - Features Core 1.0**: Query vector features from PostGIS with GeoJSON responses
+- **STAC API v1.0.0**: Discover and access raster/vector metadata catalogs
 
-### Key Features
-
-- **Dual API Architecture**: OGC Features + STAC in single deployment
-- **Standards Compliance**: OGC API - Features Core 1.0 & STAC API v1.0.0
-- **PostgreSQL Integration**: Direct queries to Azure PostgreSQL with PostGIS and pgSTAC
-- **GeoJSON Responses**: Standards-compliant GeoJSON for both APIs
-- **Spatial Filtering**: Bounding box queries for geographic subsetting
-- **Pagination Support**: Efficient handling of large datasets
-- **Read-Only Architecture**: No write operations to database
-- **Microservices Ready**: Independent scaling and deployment
+Designed for **read-only** access with managed identity authentication, independent scaling, and microservices architecture.
 
 ---
 
-## API Endpoints
+## Key Features
 
-### Base URL
-
-- **Production**: https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net
-- **Local Development**: http://localhost:7071
-
-### Available Endpoints
-
-**Health Check**:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Service health check and status (both APIs) |
-
-**OGC Features API** (6 endpoints):
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/features` | GET | Landing page with API metadata |
-| `/api/features/conformance` | GET | OGC conformance classes |
-| `/api/features/collections` | GET | List all vector collections |
-| `/api/features/collections/{collectionId}` | GET | Collection metadata and extent |
-| `/api/features/collections/{collectionId}/items` | GET | Query features from collection |
-| `/api/features/collections/{collectionId}/items/{featureId}` | GET | Retrieve single feature |
-
-**STAC API** (6 endpoints):
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/stac` | GET | STAC catalog landing page |
-| `/api/stac/conformance` | GET | STAC conformance classes |
-| `/api/stac/collections` | GET | List all STAC collections |
-| `/api/stac/collections/{collectionId}` | GET | STAC collection metadata |
-| `/api/stac/collections/{collectionId}/items` | GET | Query STAC items (with pagination) |
-| `/api/stac/collections/{collectionId}/items/{itemId}` | GET | Retrieve single STAC item |
-
-**Total**: 13 HTTP endpoints (6 OGC + 6 STAC + 1 health)
+- **Dual API Architecture**: OGC Features + STAC in a single deployment
+- **Standards Compliance**: Fully conformant with OGC and STAC specifications
+- **Azure Managed Identity**: Secure, passwordless PostgreSQL authentication
+- **PostGIS & pgSTAC**: Native support for spatial queries and STAC catalogs
+- **GeoJSON Output**: Standards-compliant spatial data responses
+- **Spatial Filtering**: Bounding box and temporal queries
+- **Pagination**: Efficient handling of large datasets
+- **Production Ready**: Active deployment serving 5 OGC collections + 4 STAC collections
 
 ---
 
@@ -71,251 +39,105 @@ rmhogcapi is a dedicated Azure Function App serving two standards-compliant geos
 
 - Python 3.11+
 - Azure Functions Core Tools 4.x
-- Azure CLI (for deployment)
 - Access to Azure PostgreSQL with PostGIS
 
 ### Local Development
 
-1. **Clone and setup**:
-   ```bash
-   cd rmhogcapi
-   pip install -r requirements.txt
-   ```
+```bash
+# Clone and install dependencies
+git clone <repository>
+cd rmhogcapi
+pip install -r requirements.txt
 
-2. **Configure local settings**:
-   ```bash
-   cp local.settings.example.json local.settings.json
-   # Edit local.settings.json with your PostgreSQL credentials
-   ```
+# Configure local settings
+cp local.settings.example.json local.settings.json
+# Edit local.settings.json with your PostgreSQL credentials
 
-3. **Start local server**:
-   ```bash
-   func start
-   ```
+# Start local server
+func start
 
-4. **Test endpoints**:
-   ```bash
-   curl http://localhost:7071/api/health
-   curl http://localhost:7071/api/features/collections
-   ```
+# Test endpoints
+curl http://localhost:7071/api/health
+curl http://localhost:7071/api/features/collections
+curl http://localhost:7071/api/stac/collections
+```
 
 ---
 
-## Configuration
+## API Endpoints
 
-### Environment Variables
-
-All configuration is managed through environment variables (Azure App Settings in production):
-
-#### PostgreSQL Connection (Required)
-
+### Production Base URL
 ```
-POSTGIS_HOST=rmhpgflex.postgres.database.azure.com
-POSTGIS_PORT=5432
-POSTGIS_DATABASE=geopgflex
-POSTGIS_USER=rob634
-POSTGIS_PASSWORD=<password>
-USE_MANAGED_IDENTITY=false
+https://<your-function-app>.azurewebsites.net
 ```
 
-#### OGC Features Settings (Optional)
+### Available Endpoints
 
-```
-OGC_SCHEMA=geo
-OGC_GEOMETRY_COLUMN=geom
-OGC_DEFAULT_LIMIT=100
-OGC_MAX_LIMIT=10000
-OGC_DEFAULT_PRECISION=6
-OGC_ENABLE_VALIDATION=true
-OGC_QUERY_TIMEOUT=30
-```
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/health` | Public health check (minimal response) |
+| `GET /api/health/detailed` | Detailed health metrics (for APIM probes) |
+| `GET /api/features` | OGC Features landing page |
+| `GET /api/features/conformance` | OGC conformance classes |
+| `GET /api/features/collections` | List OGC vector collections |
+| `GET /api/features/collections/{id}` | Collection metadata |
+| `GET /api/features/collections/{id}/items` | Query features with filters |
+| `GET /api/features/collections/{id}/items/{featureId}` | Single feature by ID |
+| `GET /api/stac` | STAC API landing page |
+| `GET /api/stac/conformance` | STAC conformance classes |
+| `GET /api/stac/collections` | List STAC catalogs |
+| `GET /api/stac/collections/{id}` | Collection metadata |
+| `GET /api/stac/collections/{id}/items` | Query STAC items |
+| `GET /api/stac/collections/{id}/items/{itemId}` | Single STAC item |
+| `GET/POST /api/stac/search` | STAC search endpoint |
 
-#### STAC API Settings (Optional)
-
-```
-STAC_CATALOG_ID=rmh-geospatial-stac
-STAC_CATALOG_TITLE=RMH Geospatial STAC API
-STAC_DESCRIPTION=STAC catalog for geospatial raster and vector data
-STAC_BASE_URL=https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net
-```
-
-### Configuration Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `OGC_SCHEMA` | geo | PostgreSQL schema containing vector tables |
-| `OGC_GEOMETRY_COLUMN` | geom | Default geometry column name (use "shape" for ArcGIS) |
-| `OGC_DEFAULT_LIMIT` | 100 | Default number of features returned |
-| `OGC_MAX_LIMIT` | 10000 | Maximum features allowed per request |
-| `OGC_DEFAULT_PRECISION` | 6 | Coordinate decimal precision |
-| `OGC_ENABLE_VALIDATION` | true | Enable spatial index validation |
-| `OGC_QUERY_TIMEOUT` | 30 | Query timeout in seconds |
+**Total**: 15 HTTP endpoints (6 OGC + 7 STAC + 2 health)
 
 ---
 
 ## Usage Examples
 
-### List Available Collections
+### List OGC Features Collections
 
 ```bash
-curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections
+curl "https://<your-function-app>.azurewebsites.net/api/features/collections"
 ```
 
-**Response**:
-```json
-{
-  "collections": [
-    {
-      "id": "acled_serial_001",
-      "title": "Acled Serial 001",
-      "description": "Vector features from acled_serial_001",
-      "links": [...],
-      "itemType": "feature",
-      "crs": ["http://www.opengis.net/def/crs/EPSG/0/4326"]
-    }
-  ]
-}
-```
-
-### Query Features with Pagination
+### Query Features with Filters
 
 ```bash
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections/acled_serial_001/items?limit=10&offset=0"
+# Spatial filter (bounding box)
+curl "https://<your-function-app>.azurewebsites.net/api/features/collections/acled_serial_001/items?bbox=30,45,35,50&limit=100"
+
+# Temporal filter
+curl "https://<your-function-app>.azurewebsites.net/api/features/collections/acled_serial_001/items?datetime=2022-01-01/2022-12-31"
 ```
 
-### Spatial Filter (Bounding Box)
+### Access STAC Catalog
 
 ```bash
-# bbox format: minx,miny,maxx,maxy (EPSG:4326)
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections/acled_serial_001/items?bbox=30,45,35,50&limit=100"
-```
+# List STAC collections
+curl "https://<your-function-app>.azurewebsites.net/api/stac/collections"
 
-### Temporal Filter
-
-```bash
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections/acled_serial_001/items?datetime=2022-01-01/2022-12-31&limit=50"
-```
-
-### Attribute Filters
-
-```bash
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections/acled_serial_001/items?year=2022&country=Ukraine&limit=20"
-```
-
-### Combined Filters
-
-```bash
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/features/collections/acled_serial_001/items?bbox=30,45,35,50&datetime=2022-01-01/2022-12-31&year=2022&limit=100"
+# Query STAC items
+curl "https://<your-function-app>.azurewebsites.net/api/stac/collections/namangan_test_1/items?limit=50"
 ```
 
 ---
 
-## STAC API Usage Examples
+## Documentation
 
-### Get STAC Catalog
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get up and running in 5 minutes
+- **[Configuration](docs/CONFIGURATION.md)** - Environment variables and settings
+- **[API Reference](docs/API_REFERENCE.md)** - Complete endpoint documentation
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Azure deployment instructions
+- **[Authentication](docs/AUTHENTICATION.md)** - Managed identity setup
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
-```bash
-curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac
-```
+### Database Setup
 
-**Response**:
-```json
-{
-  "id": "rmh-geospatial-stac",
-  "type": "Catalog",
-  "title": "RMH Geospatial STAC API",
-  "stac_version": "1.0.0",
-  "conformsTo": [
-    "https://api.stacspec.org/v1.0.0/core",
-    "https://api.stacspec.org/v1.0.0/collections"
-  ],
-  "links": [...]
-}
-```
-
-### List STAC Collections
-
-```bash
-curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac/collections
-```
-
-### Get Collection Metadata
-
-```bash
-curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac/collections/namangan_test_1
-```
-
-### Query STAC Items with Pagination
-
-```bash
-curl "https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac/collections/namangan_test_1/items?limit=50&offset=0"
-```
-
-### Get Single STAC Item
-
-```bash
-curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac/collections/namangan_test_1/items/{item-id}
-```
-
-### Using pystac-client
-
-```python
-from pystac_client import Client
-
-# Open STAC catalog
-catalog = Client.open("https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/stac")
-
-# List collections
-collections = list(catalog.get_collections())
-print(f"Found {len(collections)} collections")
-
-# Get items from collection
-collection = catalog.get_collection("namangan_test_1")
-items = collection.get_items()
-for item in items:
-    print(f"Item: {item.id}")
-```
-
----
-
-## Deployment
-
-### Azure Deployment
-
-1. **Configure Azure Function App**:
-   ```bash
-   az functionapp config appsettings set \
-     --name rmhgeoapifn \
-     --resource-group rmhazure_rg \
-     --settings \
-       POSTGIS_HOST="rmhpgflex.postgres.database.azure.com" \
-       POSTGIS_PORT="5432" \
-       POSTGIS_DATABASE="geopgflex" \
-       POSTGIS_USER="rob634" \
-       POSTGIS_PASSWORD="<password>" \
-       USE_MANAGED_IDENTITY="false" \
-       OGC_SCHEMA="geo"
-   ```
-
-2. **Deploy application**:
-   ```bash
-   func azure functionapp publish rmhgeoapifn
-   ```
-
-3. **Verify deployment**:
-   ```bash
-   curl https://rmhgeoapifn-dydhe8dddef4f7bd.eastus-01.azurewebsites.net/api/health
-   ```
-
-### Deployment Checklist
-
-- [ ] Azure Function App created (Linux, Python 3.11)
-- [ ] PostgreSQL firewall rules configured
-- [ ] Environment variables configured in Azure
-- [ ] Application deployed successfully
-- [ ] Health endpoint returns "healthy" status
-- [ ] Collections endpoint returns data
-- [ ] CORS configured if needed
+- **[DB_READER_SQL.md](DB_READER_SQL.md)** - Read-only managed identity setup (rmhpgflexreader)
+- **[DB_ADMIN_SQL.md](DB_ADMIN_SQL.md)** - Admin managed identity setup (rmhpgflexadmin)
 
 ---
 
@@ -324,212 +146,64 @@ for item in items:
 ### Technology Stack
 
 - **Runtime**: Python 3.11, Azure Functions v4
-- **Database**: Azure PostgreSQL with PostGIS extension
+- **Database**: Azure PostgreSQL Flexible Server (PostGIS + pgSTAC)
+- **Authentication**: Azure User-Assigned Managed Identity
 - **API Framework**: Azure Functions HTTP triggers
 - **Data Validation**: Pydantic v2
-- **PostgreSQL Driver**: psycopg3 with binary extensions
 
 ### Project Structure
 
 ```
 rmhogcapi/
-├── function_app.py        # Azure Functions entry point (13 HTTP endpoints)
-├── config.py              # Configuration management
-├── host.json              # Azure Functions runtime config
+├── function_app.py        # Azure Functions entry point (15 HTTP endpoints)
+├── health.py              # Production health monitoring (public + detailed)
+├── config.py              # Configuration with managed identity support
 ├── requirements.txt       # Python dependencies
-├── local.settings.json    # Local development settings
-├── infrastructure/        # Shared infrastructure layer
-│   ├── postgresql.py      # PostgreSQL repository (per-request connections)
-│   └── stac_queries.py    # Read-only STAC query functions
+├── infrastructure/        # PostgreSQL repository and STAC queries
 ├── ogc_features/          # OGC Features API module (6 endpoints)
-│   ├── __init__.py        # Module exports
-│   ├── config.py          # OGC-specific configuration
-│   ├── models.py          # Pydantic response models
-│   ├── repository.py      # PostGIS data access layer
-│   ├── service.py         # Business logic layer
-│   └── triggers.py        # HTTP endpoint handlers
-├── stac_api/              # STAC API module (6 endpoints)
-│   ├── __init__.py        # Module exports
-│   ├── config.py          # STAC-specific configuration
-│   ├── models.py          # STAC response models
-│   ├── service.py         # STAC business logic
-│   └── triggers.py        # STAC HTTP endpoint handlers
-└── docs/
-    ├── README.md          # This file
-    └── ARCHITECTURE.md    # Technical architecture
+├── stac_api/              # STAC API module (7 endpoints)
+└── docs/                  # Documentation
 ```
 
 ---
 
-## Performance Considerations
+## Security & Authentication
 
-### Database Optimization
+This application uses **Azure User-Assigned Managed Identity** for secure, passwordless PostgreSQL authentication:
 
-- **Spatial Indexes**: GiST indexes on geometry columns recommended
-- **Primary Keys**: Required for feature ID lookups
-- **Per-Request Connections**: No connection pooling (suitable for serverless)
-- **Query Timeout**: 30-second default timeout prevents long-running queries
-- **Dual Schema**: `geo` schema for PostGIS vectors, `pgstac` schema for STAC catalog
+- **Identity**: `rmhpgflexreader` (Client ID: `1c79a2fe-42cb-4f30-8fe9-c1dfc04f142f`)
+- **Database Role**: Read-only access to `geo`, `pgstac`, and `h3` schemas
+- **No Secrets**: No passwords stored in application settings
+- **Token-Based**: Automatic Azure AD token refresh (1-hour expiry)
+- **SSL/TLS**: Enforced for all PostgreSQL connections
 
-### Response Optimization
-
-- **Geometry Simplification**: Optional via `simplify` parameter (meters)
-- **Coordinate Precision**: Configurable via `precision` parameter (decimal places)
-- **Pagination**: Default limit of 100 features, maximum 10,000
-- **Caching**: Consider Azure Front Door or CDN for static responses
-
----
-
-## Security
-
-### Authentication
-
-- **Current**: Anonymous access (public read API)
-- **Future**: Azure AD authentication via API Management
-
-### Database Access
-
-- **Current**: Password-based authentication (URL-encoded)
-- **Future**: Managed Identity authentication
-
-### Network Security
-
-- **SSL/TLS**: Enforced for all PostgreSQL connections (`sslmode=require`)
-- **Firewall**: PostgreSQL firewall rules control access
-- **CORS**: Configurable via `local.settings.json` or Azure portal
-
----
-
-## Monitoring
-
-### Health Endpoint
-
-```bash
-GET /api/health
-```
-
-**Response**:
-```json
-{
-  "status": "healthy",
-  "app": "rmhogcapi",
-  "description": "OGC Features & STAC API Service",
-  "apis": {
-    "ogc_features": {
-      "available": true,
-      "schema": "geo",
-      "endpoints": 6
-    },
-    "stac": {
-      "available": true,
-      "schema": "pgstac",
-      "endpoints": 6
-    }
-  }
-}
-```
-
-### Application Insights
-
-- Function execution times
-- Request/response metrics
-- Error tracking and diagnostics
-- Database query performance
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue**: Collections endpoint returns empty array
-
-**Solution**: Verify PostgreSQL connection and ensure `geo` schema contains tables with geometry columns
-
----
-
-**Issue**: Connection timeout errors
-
-**Solution**: Check PostgreSQL firewall rules and network connectivity
-
----
-
-**Issue**: Password authentication fails
-
-**Solution**: Ensure password is correctly URL-encoded in environment variables (special characters like @ must be encoded)
-
----
-
-**Issue**: No features returned for valid collection
-
-**Solution**: Verify geometry column name matches `OGC_GEOMETRY_COLUMN` setting or exists in `geometry_columns` view
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for detailed setup instructions.
 
 ---
 
 ## Standards Compliance
 
 ### OGC API - Features Core 1.0
-
-This implementation conforms to:
-- **OGC API - Features - Part 1: Core** (OGC 17-069r4)
+- **OGC 17-069r4** specification
 - **GeoJSON** (RFC 7946)
-- **CRS84 and EPSG:4326** coordinate reference systems
-
-**Conformance Classes:**
-- Core
-- GeoJSON
-- HTML (not implemented)
-- OpenAPI 3.0 (not implemented)
+- **EPSG:4326** coordinate reference system
 
 ### STAC API v1.0.0
-
-This implementation conforms to:
-- **STAC API v1.0.0** specification
-- **STAC Core** (required)
-- **STAC Collections** (required)
-- **STAC Items** (required)
+- **STAC API Core** specification
+- **STAC Collections** extension
 - **pgSTAC v0.9.8** backend
 
-**Conformance Classes:**
-- STAC API - Core
-- STAC API - Collections
-- STAC API - Features (GeoJSON)
-- STAC Search (not yet implemented)
-
 ---
 
-## Support and Maintenance
+## Support
 
-### Resources
-
+- **Issues**: Report bugs or request features via GitHub issues
+- **Documentation**: See [docs/](docs/) directory
 - **OGC Specification**: https://docs.ogc.org/is/17-069r4/17-069r4.html
-- **STAC API Specification**: https://github.com/radiantearth/stac-api-spec
-- **GeoJSON Specification**: https://datatracker.ietf.org/doc/html/rfc7946
-- **pgSTAC Documentation**: https://github.com/stac-utils/pgstac
-- **Azure Functions Python**: https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference-python
-
-### Database Schema Requirements
-
-#### OGC Features (`geo` schema)
-- PostgreSQL 12+ with PostGIS 3.0+
-- Tables in `geo` schema
-- Geometry columns registered in `geometry_columns` view
-- Spatial indexes (GiST) recommended for performance
-
-#### STAC API (`pgstac` schema)
-- PostgreSQL 12+ with pgSTAC 0.9.8+
-- pgSTAC schema installed
-- Collections in `pgstac.collections` table
-- Items in `pgstac.items` table
-
----
-
-## License
-
-Internal corporate use only.
+- **STAC Specification**: https://github.com/radiantearth/stac-api-spec
 
 ---
 
 **Version**: 1.0.0
-**Last Updated**: 19 NOV 2025
+**Last Updated**: 24 NOV 2025
 **Status**: Production Ready

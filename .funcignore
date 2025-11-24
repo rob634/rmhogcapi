@@ -13,6 +13,7 @@
 .vscode
 .vs
 .idea
+.claude
 
 # Python
 __pycache__
@@ -30,6 +31,9 @@ venv
 htmlcov
 tests
 test_*.py
+
+# Demo/test files
+ogc_features/map.html
 
 # Documentation (exclude from deployment)
 *.md

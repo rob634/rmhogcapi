@@ -3,7 +3,7 @@
 # ============================================================================
 # STATUS: Core Infrastructure - PostgreSQL connection management
 # PURPOSE: PostgreSQL database access for read-only STAC and OGC APIs
-# LAST_REVIEWED: 19 NOV 2025
+# LAST_REVIEWED: Current
 # EXPORTS: PostgreSQLRepository
 # DEPENDENCIES: psycopg, config, util_logger
 # SOURCE: Extracted from rmhgeoapi/infrastructure/postgresql.py

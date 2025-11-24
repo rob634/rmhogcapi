@@ -1,10 +1,9 @@
 # ============================================================================
 # CLAUDE CONTEXT - OGC FEATURES TRIGGERS
 # ============================================================================
-# EPOCH: 4 - ACTIVE ✅
 # STATUS: Standalone HTTP Triggers - OGC Features API endpoints
 # PURPOSE: Azure Functions HTTP triggers for OGC API - Features endpoints
-# LAST_REVIEWED: 29 OCT 2025
+# LAST_REVIEWED: Current
 # EXPORTS: get_ogc_triggers (returns list of trigger configurations)
 # INTERFACES: Azure Functions HttpRequest/HttpResponse
 # PYDANTIC_MODELS: OGCQueryParameters (for validation)
@@ -47,7 +46,6 @@ Integration:
             auth_level=func.AuthLevel.ANONYMOUS
         )(trigger['handler'])
 
-Author: Robert and Geospatial Claude Legion
 Date: 29 OCT 2025
 """
 

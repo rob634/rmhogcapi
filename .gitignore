@@ -65,3 +65,22 @@ wheels/
 # Temporary files
 *.tmp
 *.bak
+
+# Test files (specific pattern to avoid excluding test utilities)
+test_*.py
+*_test.py
+
+# Claude Code IDE
+.claude/
+
+# Development/planning documents (not needed in production)
+TODO.md
+ogc_features/IMPLEMENTATION_TODO.md
+ogc_features/LOCAL_TESTING_GUIDE.md
+
+# Database SQL helper scripts (development only)
+DB_ADMIN_SQL.md
+DB_READER_SQL.md
+
+# Test/demo files
+ogc_features/map.html

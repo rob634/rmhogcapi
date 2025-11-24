@@ -1,7 +1,5 @@
 # 📁 rmhogcapi - OGC Features & STAC API Azure Function App
 
-**Date**: 17 NOV 2025
-**Author**: Robert and Geospatial Claude Legion
 **Mission**: Standalone Azure Function App serving OGC Features API and STAC search/query APIs
 
 ---
@@ -80,7 +78,7 @@ The geospatial data served by these APIs is created by the **rmhgeoapi** ETL pip
 ## 🚀 This Project's Mission
 
 ### Current Status
-**NEW PROJECT - INITIALIZATION PHASE**
+Production
 
 The rmhgeoapi system currently serves ALL APIs from a monolithic Function App:
 ```

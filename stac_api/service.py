@@ -4,9 +4,9 @@ STAC API Service Layer
 Business logic for STAC API endpoints.
 Calls infrastructure.stac for database operations.
 
-Author: Robert and Geospatial Claude Legion
 Date: 10 NOV 2025
 Updated: 11 NOV 2025 - Added all STAC v1.0.0 endpoints
+Updated: 24 NOV 2025 - Added OpenAPI endpoint, fixed pagination with offset support
 """
 
 from typing import Dict, Any, Optional
@@ -68,9 +68,9 @@ class STACAPIService:
                 },
                 {
                     "rel": "service-desc",
-                    "type": "text/html",
-                    "href": "https://stacspec.org/en/api/",
-                    "title": "STAC API specification"
+                    "type": "application/vnd.oai.openapi+json;version=3.0",
+                    "href": f"{base_url}/api/stac/api",
+                    "title": "OpenAPI specification"
                 }
             ]
         }
@@ -91,6 +91,22 @@ class STACAPIService:
                 "http://www.opengis.net/spec/ogcapi-features-1/1.0/conf/geojson"
             ]
         }
+
+    def get_openapi_spec(self, base_url: str) -> Dict[str, Any]:
+        """
+        Get OpenAPI 3.0 specification for this API.
+
+        Required by STAC API Core conformance class.
+        The spec requires a service-desc link pointing to an OpenAPI document.
+
+        Args:
+            base_url: Base URL for server definition
+
+        Returns:
+            OpenAPI 3.0 specification dict
+        """
+        from .openapi import get_openapi_spec
+        return get_openapi_spec(base_url)
 
     def get_collections(self, base_url: str) -> Dict[str, Any]:
         """
@@ -221,27 +237,31 @@ class STACAPIService:
             bbox: Bounding box filter (optional)
 
         Returns:
-            FeatureCollection with items and pagination links
+            FeatureCollection with items, pagination links, and metadata
+            (numberMatched, numberReturned, next/prev links)
         """
         from infrastructure.stac_queries import get_collection_items
 
-        # Note: infrastructure.stac.get_collection_items doesn't support offset pagination
-        # It returns all items up to limit
+        # Pass offset to infrastructure layer for proper pagination
         response = get_collection_items(
             collection_id=collection_id,
             limit=limit,
+            offset=offset,
             bbox=bbox
         )
 
         if 'error' not in response:
-            # Build basic STAC-compliant links
-            # Note: pagination next/prev links not supported yet (infrastructure layer limitation)
+            # Extract pagination metadata from infrastructure response
+            total_count = response.get('numberMatched', 0)
+            returned_count = response.get('numberReturned', len(response.get('features', [])))
+
+            # Build pagination links per OGC API Features spec
             links = [
                 {
                     "rel": "self",
                     "type": "application/geo+json",
-                    "href": f"{base_url}/api/stac/collections/{collection_id}/items?limit={limit}",
-                    "title": "This document"
+                    "href": f"{base_url}/api/stac/collections/{collection_id}/items?limit={limit}&offset={offset}",
+                    "title": "This page"
                 },
                 {
                     "rel": "parent",
@@ -262,6 +282,26 @@ class STACAPIService:
                     "title": f"Collection {collection_id}"
                 }
             ]
+
+            # Add 'next' link if more items exist (REQUIRED by OGC Features spec)
+            if offset + returned_count < total_count:
+                next_offset = offset + limit
+                links.append({
+                    "rel": "next",
+                    "type": "application/geo+json",
+                    "href": f"{base_url}/api/stac/collections/{collection_id}/items?limit={limit}&offset={next_offset}",
+                    "title": "Next page"
+                })
+
+            # Add 'prev' link if not on first page
+            if offset > 0:
+                prev_offset = max(0, offset - limit)
+                links.append({
+                    "rel": "prev",
+                    "type": "application/geo+json",
+                    "href": f"{base_url}/api/stac/collections/{collection_id}/items?limit={limit}&offset={prev_offset}",
+                    "title": "Previous page"
+                })
 
             response['links'] = links
 

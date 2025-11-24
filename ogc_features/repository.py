@@ -1,10 +1,9 @@
 # ============================================================================
 # CLAUDE CONTEXT - OGC FEATURES REPOSITORY
 # ============================================================================
-# EPOCH: 4 - ACTIVE ✅
 # STATUS: Standalone Repository - PostGIS vector data access
 # PURPOSE: Direct PostGIS queries for OGC Features API with ST_AsGeoJSON optimization
-# LAST_REVIEWED: 29 OCT 2025
+# LAST_REVIEWED: Current
 # EXPORTS: OGCFeaturesRepository
 # INTERFACES: None (standalone implementation)
 # PYDANTIC_MODELS: None (uses plain dicts for SQL safety)
@@ -35,7 +34,6 @@ Safety:
 - Values via parameterized queries (%s placeholders)
 - SQL injection prevention guaranteed
 
-Author: Robert and Geospatial Claude Legion
 Date: 29 OCT 2025
 """
 

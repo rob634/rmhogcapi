@@ -1,10 +1,9 @@
 # ============================================================================
 # CLAUDE CONTEXT - OGC FEATURES SERVICE
 # ============================================================================
-# EPOCH: 4 - ACTIVE ✅
 # STATUS: Standalone Service - OGC Features API business logic
 # PURPOSE: Business logic orchestration for OGC Features API endpoints
-# LAST_REVIEWED: 29 OCT 2025
+# LAST_REVIEWED: Current
 # EXPORTS: OGCFeaturesService
 # INTERFACES: None (standalone implementation)
 # PYDANTIC_MODELS: OGCLandingPage, OGCConformance, OGCCollection, OGCFeatureCollection, OGCLink
@@ -31,7 +30,6 @@ and the PostGIS repository layer. Handles:
 This layer is responsible for implementing OGC API - Features specification
 requirements while delegating database operations to the repository layer.
 
-Author: Robert and Geospatial Claude Legion
 Date: 29 OCT 2025
 """
 

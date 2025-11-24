@@ -1,6 +1,5 @@
 # OGC Features API - Local Testing Guide
 
-**Author**: Robert and Geospatial Claude Legion
 **Date**: 29 OCT 2025
 **Purpose**: Complete guide for local development and testing with PostGIS
 
@@ -747,5 +746,4 @@ docker rm postgis-local
 
 ---
 
-**Author**: Robert and Geospatial Claude Legion
 **Date**: 29 OCT 2025

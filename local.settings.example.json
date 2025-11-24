@@ -10,7 +10,17 @@
     "POSTGIS_DATABASE": "geopgflex",
     "POSTGIS_USER": "rob634",
     "POSTGIS_PASSWORD": "YOUR_PASSWORD_HERE",
+
+    "_comment_auth": "Authentication Mode - Choose ONE:",
+    "_comment_auth_1": "  Option 1 (Local Dev): USE_MANAGED_IDENTITY=false + POSTGIS_PASSWORD",
+    "_comment_auth_2": "  Option 2 (Azure Prod): USE_MANAGED_IDENTITY=true + AZURE_CLIENT_ID + POSTGIS_USER=identity_name",
     "USE_MANAGED_IDENTITY": "false",
+
+    "_comment_identity": "User-Assigned Managed Identity (for Azure production)",
+    "_comment_identity_1": "  AZURE_CLIENT_ID: Client ID of user-assigned managed identity",
+    "_comment_identity_2": "  When enabled, POSTGIS_USER should be the identity name (e.g., rmhtitileridentity)",
+    "_comment_identity_3": "  This allows sharing a single read-only identity across TiTiler, rmhogcapi, etc.",
+    "AZURE_CLIENT_ID": "",
 
     "_comment_ogc": "OGC Features API Configuration",
     "OGC_SCHEMA": "geo",
@@ -22,7 +32,8 @@
     "OGC_QUERY_TIMEOUT": "30",
 
     "_comment_optional": "Optional Settings",
-    "OGC_BASE_URL": ""
+    "OGC_BASE_URL": "",
+    "STAC_BASE_URL": ""
   },
   "Host": {
     "CORS": "*",

@@ -21,7 +21,6 @@ Integration (in function_app.py):
             auth_level=func.AuthLevel.ANONYMOUS
         )(trigger['handler'])
 
-Author: Robert and Geospatial Claude Legion
 Date: 10 NOV 2025
 Updated: 11 NOV 2025 - Added all STAC v1.0.0 endpoints
 """
@@ -74,6 +73,11 @@ def get_stac_triggers() -> List[Dict[str, Any]]:
             'route': 'stac/conformance',
             'methods': ['GET'],
             'handler': STACConformanceTrigger().handle
+        },
+        {
+            'route': 'stac/api',
+            'methods': ['GET'],
+            'handler': STACOpenAPITrigger().handle
         },
         {
             'route': 'stac/collections',
@@ -261,6 +265,48 @@ class STACConformanceTrigger(BaseSTACTrigger):
 
         except Exception as e:
             logger.error(f"Error generating STAC API conformance: {e}", exc_info=True)
+            return self._error_response(
+                message=str(e),
+                status_code=500,
+                error_type="InternalServerError"
+            )
+
+
+class STACOpenAPITrigger(BaseSTACTrigger):
+    """
+    OpenAPI specification trigger.
+
+    Endpoint: GET /api/stac/api
+
+    Required by STAC API Core conformance class.
+    Returns OpenAPI 3.0 specification document.
+    """
+
+    def handle(self, req: func.HttpRequest) -> func.HttpResponse:
+        """
+        Handle OpenAPI specification request.
+
+        Args:
+            req: Azure Functions HTTP request
+
+        Returns:
+            OpenAPI 3.0 JSON response
+        """
+        try:
+            logger.info("STAC API OpenAPI spec requested")
+
+            base_url = self._get_base_url(req)
+            openapi_spec = self.service.get_openapi_spec(base_url)
+
+            logger.info("STAC API OpenAPI spec generated successfully")
+            # Use application/vnd.oai.openapi+json for OpenAPI spec
+            return self._json_response(
+                openapi_spec,
+                content_type="application/vnd.oai.openapi+json;version=3.0"
+            )
+
+        except Exception as e:
+            logger.error(f"Error generating STAC API OpenAPI spec: {e}", exc_info=True)
             return self._error_response(
                 message=str(e),
                 status_code=500,

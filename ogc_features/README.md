@@ -1,6 +1,5 @@
 # OGC API - Features Implementation
 
-**Author**: Robert and Geospatial Claude Legion
 **Date**: 29 OCT 2025
 **Version**: 1.0.0
 **Status**: Development - Phase 1 Complete
@@ -505,7 +504,7 @@ CREATE TABLE geo.buildings (
     geom GEOMETRY(Polygon, 4326)  -- Or Point, LineString, MultiPolygon, etc.
 );
 
--- CRITICAL: Create spatial index (required for performance)
+-- Important: Create spatial index (required for performance)
 CREATE INDEX idx_buildings_geom ON geo.buildings USING GIST(geom);
 
 -- Update statistics
@@ -757,7 +756,6 @@ Part of rmhgeoapi project - Internal use only.
 
 ## Authors
 
-**Robert and Geospatial Claude Legion**
 Date: 29 OCT 2025
 
 For questions or issues, refer to main project documentation.

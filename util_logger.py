@@ -1,9 +1,7 @@
 # ============================================================================
 # CLAUDE CONTEXT - LOGGING
 # ============================================================================
-# EPOCH: SHARED - BOTH EPOCHS
 # STATUS: Used by Epoch 3 and Epoch 4
-# NOTE: Careful migration required
 # PURPOSE: JSON-only structured logging for Azure Functions with Application Insights
 # EXPORTS: ComponentType, LogLevel, LogContext, LogEvent, LoggerFactory, log_exceptions, get_memory_stats, log_memory_checkpoint
 # INTERFACES: Dataclass models, enums, factory, JSON formatter, exception decorator, DEBUG_MODE memory tracking
@@ -32,8 +30,7 @@ Design Principles:
 - Clean factory pattern
 - No external dependencies
 
-Author: Robert and Geospatial Claude Legion
-Date: 9 September 2025
+
 """
 
 from enum import Enum
@@ -48,7 +45,7 @@ from functools import wraps
 
 
 # ============================================================================
-# DEBUG MODE - Lazy imports for memory tracking (8 NOV 2025)
+# Memory tracking utilities for debugging
 # ============================================================================
 
 def _lazy_import_psutil():

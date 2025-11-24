@@ -1,10 +1,9 @@
 # ============================================================================
 # CLAUDE CONTEXT - OGC FEATURES API MODULE
 # ============================================================================
-# EPOCH: 4 - ACTIVE ✅
 # STATUS: Standalone Module - OGC Features API implementation
 # PURPOSE: Self-contained OGC API - Features implementation for PostGIS vector data
-# LAST_REVIEWED: 29 OCT 2025
+# LAST_REVIEWED: Current
 # EXPORTS: OGCFeaturesService, OGCFeaturesConfig, get_ogc_triggers
 # INTERFACES: Standalone - no dependencies on main application
 # PYDANTIC_MODELS: OGCFeatureCollection, OGCCollection, OGCLandingPage
@@ -57,7 +56,6 @@ Deployment:
     2. Set environment variables (POSTGIS_HOST, etc.)
     3. Deploy: func azure functionapp publish <app-name>
 
-Author: Robert and Geospatial Claude Legion
 Date: 29 OCT 2025
 """
 

@@ -1,7 +1,6 @@
 # OGC Features API - Implementation TODO
 
 **Date**: 29 OCT 2025
-**Author**: Robert and Geospatial Claude Legion
 **Status**: In Progress
 
 ## Overview
@@ -518,7 +517,7 @@ map.on('moveend', updateLayer);
 
 ## Notes
 
-**CRITICAL**: This module must remain COMPLETELY standalone:
+Important: This module must remain COMPLETELY standalone:
 - NO imports from `core/`, `infrastructure/`, `jobs/`, `services/`
 - NO dependency on main `config.py`
 - ONLY integration point is `function_app.py` route registration

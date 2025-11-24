@@ -1,10 +1,9 @@
 # ============================================================================
 # CLAUDE CONTEXT - OGC FEATURES MODELS
 # ============================================================================
-# EPOCH: 4 - ACTIVE ✅
 # STATUS: Standalone Models - OGC Features API Pydantic models
 # PURPOSE: OGC API - Features response models (completely standalone)
-# LAST_REVIEWED: 29 OCT 2025
+# LAST_REVIEWED: Current
 # EXPORTS: OGCLandingPage, OGCConformance, OGCCollection, OGCFeatureCollection, OGCLink
 # INTERFACES: Pydantic BaseModel
 # PYDANTIC_MODELS: All classes in this file
@@ -27,7 +26,6 @@ References:
 - OGC API - Features Core 1.0: https://docs.ogc.org/is/17-069r4/17-069r4.html
 - GeoJSON RFC 7946: https://tools.ietf.org/html/rfc7946
 
-Author: Robert and Geospatial Claude Legion
 Date: 29 OCT 2025
 """
 

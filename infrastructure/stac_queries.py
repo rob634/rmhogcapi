@@ -3,7 +3,7 @@
 # ============================================================================
 # STATUS: Core Infrastructure - Read-only STAC database queries
 # PURPOSE: Query functions for STAC API to access pgstac schema
-# LAST_REVIEWED: 19 NOV 2025
+# LAST_REVIEWED: Current
 # EXPORTS: get_all_collections, get_collection, get_collection_items, get_item_by_id
 # DEPENDENCIES: psycopg, infrastructure.postgresql
 # SOURCE: Extracted from rmhgeoapi/infrastructure/pgstac_bootstrap.py
@@ -90,28 +90,37 @@ def get_collection(collection_id: str, repo: Optional[PostgreSQLRepository] = No
 def get_collection_items(
     collection_id: str,
     limit: int = 100,
+    offset: int = 0,
     bbox: Optional[List[float]] = None,
     datetime_str: Optional[str] = None,
     repo: Optional[PostgreSQLRepository] = None
 ) -> Dict[str, Any]:
     """
-    Get items in a collection.
+    Get items in a collection with pagination support.
 
     Implements: GET /collections/{collection_id}/items
 
     Args:
         collection_id: Collection identifier
         limit: Maximum number of items to return (default 100)
+        offset: Number of items to skip for pagination (default 0)
         bbox: Bounding box filter [minx, miny, maxx, maxy]
         datetime_str: Datetime filter (RFC 3339 or interval)
         repo: Optional PostgreSQLRepository instance
 
     Returns:
-        STAC ItemCollection (GeoJSON FeatureCollection)
+        STAC ItemCollection (GeoJSON FeatureCollection) with pagination metadata:
+        {
+            "type": "FeatureCollection",
+            "features": [...],
+            "numberMatched": <total_count>,
+            "numberReturned": <returned_count>,
+            "links": []
+        }
 
     Example:
-        items = get_collection_items('system-rasters', limit=10)
-        print(f"Found {len(items['features'])} items")
+        items = get_collection_items('system-rasters', limit=10, offset=0)
+        print(f"Found {items['numberMatched']} total, returned {items['numberReturned']}")
     """
     try:
         if repo is None:
@@ -119,7 +128,17 @@ def get_collection_items(
 
         with repo._get_connection() as conn:
             with conn.cursor() as cur:
-                # Query items from pgstac.items table
+                # Step 1: Get total count for pagination metadata
+                count_query = """
+                    SELECT COUNT(*) as total
+                    FROM pgstac.items
+                    WHERE collection = %s
+                """
+                cur.execute(count_query, [collection_id])
+                count_result = cur.fetchone()
+                total_count = count_result['total'] if count_result else 0
+
+                # Step 2: Query items with OFFSET for pagination
                 # pgSTAC stores id, collection, geometry in separate columns
                 # Must reconstruct full STAC item by merging with content JSONB
                 query = """
@@ -143,21 +162,28 @@ def get_collection_items(
                         WHERE collection = %s
                         ORDER BY datetime DESC
                         LIMIT %s
+                        OFFSET %s
                     ) items
                 """
-                cur.execute(query, [collection_id, limit])
+                cur.execute(query, [collection_id, limit, offset])
                 result = cur.fetchone()
 
                 # jsonb_build_object() result is in 'jsonb_build_object' column
                 if result and 'jsonb_build_object' in result:
-                    return result['jsonb_build_object']
+                    response = result['jsonb_build_object']
                 else:
                     # Empty FeatureCollection
-                    return {
+                    response = {
                         'type': 'FeatureCollection',
                         'features': [],
                         'links': []
                     }
+
+                # Add pagination metadata (required by OGC API Features)
+                response['numberMatched'] = total_count
+                response['numberReturned'] = len(response.get('features', []))
+
+                return response
 
     except Exception as e:
         logger.error(f"Failed to get items for collection '{collection_id}': {e}")

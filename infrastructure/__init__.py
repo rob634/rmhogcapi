@@ -3,7 +3,7 @@
 # ============================================================================
 # STATUS: Core Infrastructure - Database and Utilities
 # PURPOSE: Shared infrastructure components for STAC and OGC APIs
-# LAST_REVIEWED: 19 NOV 2025
+# LAST_REVIEWED: Current
 # EXPORTS: PostgreSQLRepository, STAC query functions
 # DEPENDENCIES: psycopg, config
 # ============================================================================
