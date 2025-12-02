@@ -3,14 +3,14 @@
 # ============================================================================
 # STATUS: Core Infrastructure - Health Monitoring
 # PURPOSE: Production-grade health checks for APIM integration and monitoring
-# LAST_REVIEWED: 24 NOV 2025
-# EXPORTS: get_public_health, get_detailed_health, HealthStatus
+# LAST_REVIEWED: 02 DEC 2025
+# EXPORTS: get_public_health, get_detailed_health, HealthStatus, get_app_identity
 # DEPENDENCIES: psycopg, config, util_logger
 # PATTERNS: Two-tier health checks (public/detailed) for APIM
 # ============================================================================
 
 """
-Health Check Module for rmhogcapi
+Health Check Module
 
 Provides two-tier health monitoring optimized for Azure APIM integration:
 
@@ -25,6 +25,10 @@ Provides two-tier health monitoring optimized for Azure APIM integration:
    - Schema validation (geo, pgstac)
    - API module status
    - Returns 503 if unhealthy
+
+Environment Variables:
+    APP_NAME: Application identifier for health responses (default: "ogcapi")
+    APP_DESCRIPTION: Application description (default: "OGC Features & STAC API Service")
 
 APIM Configuration:
     Block /health/detailed from external gateway to prevent information disclosure.
@@ -42,6 +46,7 @@ Usage:
     # Full metrics with latency, counts, etc.
 """
 
+import os
 import time
 import uuid
 import psycopg
@@ -52,6 +57,23 @@ from typing import Optional, Dict, Any, List
 
 from config import get_postgres_connection_string, get_app_config
 from util_logger import LoggerFactory, ComponentType
+
+
+# ============================================================================
+# Application Identity Configuration
+# ============================================================================
+
+def get_app_identity() -> Dict[str, str]:
+    """
+    Get application identity from environment variables.
+
+    Returns:
+        Dict with app name and description for health responses.
+    """
+    return {
+        "name": os.getenv("APP_NAME", "ogcapi"),
+        "description": os.getenv("APP_DESCRIPTION", "OGC Features & STAC API Service")
+    }
 
 # Create module logger
 logger = LoggerFactory.create_logger(ComponentType.SERVICE, "HealthService")
@@ -458,10 +480,12 @@ def get_detailed_health() -> Dict[str, Any]:
         }
     })
 
+    app_identity = get_app_identity()
+
     return {
         "status": status.value,
-        "app": "rmhogcapi",
-        "description": "OGC Features & STAC API Service",
+        "app": app_identity["name"],
+        "description": app_identity["description"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "request_id": request_id,
         "checks": checks,

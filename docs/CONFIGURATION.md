@@ -1,12 +1,44 @@
 # Configuration Guide
 
-Complete reference for rmhogcapi environment variables and configuration settings.
+Complete reference for environment variables and configuration settings.
+
+This application is designed for **multi-tenant deployment** - all tenant-specific settings are configurable via environment variables. No code changes are required to deploy to a new Azure tenant.
 
 ---
 
 ## Configuration Overview
 
-rmhogcapi uses environment variables for all configuration. In local development, these are set in `local.settings.json`. In Azure, they're configured as Application Settings.
+All configuration is managed through environment variables:
+- **Local development**: Set in `local.settings.json`
+- **Azure production**: Set as Application Settings in the Function App
+
+---
+
+## Quick Start for New Tenant Deployment
+
+Copy `local.settings.example.json` to `local.settings.json` and update these required values:
+
+```json
+{
+  "POSTGIS_HOST": "<your-server>.postgres.database.azure.com",
+  "POSTGIS_DATABASE": "<your-database>",
+  "POSTGIS_USER": "<your-db-user>",
+  "POSTGIS_PASSWORD": "<your-password>"
+}
+```
+
+For production with managed identity, see the Authentication section below.
+
+---
+
+## Complete Environment Variable Reference
+
+### Application Identity
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `APP_NAME` | string | `ogcapi` | Application identifier (shown in health checks) |
+| `APP_DESCRIPTION` | string | `OGC Features & STAC API Service` | Application description |
 
 ---
 
@@ -14,13 +46,13 @@ rmhogcapi uses environment variables for all configuration. In local development
 
 ### Required Settings
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `POSTGIS_HOST` | PostgreSQL server hostname | `<your-postgresql-server>.postgres.database.azure.com` |
-| `POSTGIS_PORT` | PostgreSQL server port | `5432` |
-| `POSTGIS_DATABASE` | Database name | `<your-database>` |
-| `POSTGIS_USER` | Database username or managed identity name | `<your-db-user>` or `rmhpgflexreader` |
-| `POSTGIS_PASSWORD` | Database password (not required with managed identity) | `your-password` |
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `POSTGIS_HOST` | ✅ | PostgreSQL server hostname | `<your-server>.postgres.database.azure.com` |
+| `POSTGIS_PORT` | ❌ | PostgreSQL server port (default: 5432) | `5432` |
+| `POSTGIS_DATABASE` | ✅ | Database name | `<your-database>` |
+| `POSTGIS_USER` | ✅ | Database username or managed identity name | `<your-db-user>` |
+| `POSTGIS_PASSWORD` | Conditional | Database password (required if `USE_MANAGED_IDENTITY=false`) | `your-password` |
 
 ### Authentication Mode
 
@@ -40,12 +72,12 @@ rmhogcapi uses environment variables for all configuration. In local development
    }
    ```
 
-2. **Managed Identity** (Azure production):
+2. **Managed Identity** (Azure production - recommended):
    ```json
    {
      "USE_MANAGED_IDENTITY": "true",
-     "AZURE_CLIENT_ID": "1c79a2fe-42cb-4f30-8fe9-c1dfc04f142f",
-     "POSTGIS_USER": "rmhpgflexreader"
+     "AZURE_CLIENT_ID": "<your-managed-identity-client-id>",
+     "POSTGIS_USER": "<your-managed-identity-name>"
    }
    ```
 
@@ -105,17 +137,17 @@ See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed setup instructions.
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `STAC_CATALOG_ID` | string | `rmh-geospatial-stac` | STAC catalog identifier |
-| `STAC_CATALOG_TITLE` | string | `RMH Geospatial STAC API` | Human-readable catalog title |
-| `STAC_DESCRIPTION` | string | _(auto)_ | Catalog description |
-| `STAC_BASE_URL` | string | _(auto)_ | Base URL for STAC links |
+| `STAC_CATALOG_ID` | string | `geospatial-stac` | STAC catalog identifier |
+| `STAC_CATALOG_TITLE` | string | `Geospatial STAC API` | Human-readable catalog title |
+| `STAC_CATALOG_DESCRIPTION` | string | `STAC catalog for geospatial raster and vector data` | Catalog description |
+| `STAC_BASE_URL` | string | _(auto-detect)_ | Base URL for STAC links |
 
 **Example**:
 ```json
 {
-  "STAC_CATALOG_ID": "rmh-geospatial-stac",
-  "STAC_CATALOG_TITLE": "RMH Geospatial STAC API",
-  "STAC_DESCRIPTION": "STAC catalog for geospatial raster and vector data",
+  "STAC_CATALOG_ID": "my-stac-catalog",
+  "STAC_CATALOG_TITLE": "My Organization STAC API",
+  "STAC_CATALOG_DESCRIPTION": "STAC catalog for geospatial raster and vector data",
   "STAC_BASE_URL": "https://<your-function-app>.azurewebsites.net"
 }
 ```
@@ -151,7 +183,7 @@ CORS is configured in `local.settings.json` (local) or Azure portal (production)
 
 **Azure Portal**:
 1. Go to Function App → CORS
-2. Add allowed origins (e.g., `https://rmhazuregeo.z13.web.core.windows.net`)
+2. Add allowed origins (e.g., `https://<your-static-website>.z13.web.core.windows.net`)
 3. Enable "Support Credentials" if needed
 
 ---
@@ -167,7 +199,10 @@ CORS is configured in `local.settings.json` (local) or Azure portal (production)
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "python",
 
-    "POSTGIS_HOST": "<your-postgresql-server>.postgres.database.azure.com",
+    "APP_NAME": "ogcapi",
+    "APP_DESCRIPTION": "OGC Features & STAC API Service",
+
+    "POSTGIS_HOST": "<your-server>.postgres.database.azure.com",
     "POSTGIS_PORT": "5432",
     "POSTGIS_DATABASE": "<your-database>",
     "POSTGIS_USER": "<your-db-user>",
@@ -182,10 +217,12 @@ CORS is configured in `local.settings.json` (local) or Azure portal (production)
     "OGC_DEFAULT_PRECISION": "6",
     "OGC_ENABLE_VALIDATION": "true",
     "OGC_QUERY_TIMEOUT": "30",
+    "OGC_BASE_URL": "",
 
-    "STAC_CATALOG_ID": "rmh-geospatial-stac",
-    "STAC_CATALOG_TITLE": "RMH Geospatial STAC API",
-    "STAC_DESCRIPTION": "STAC catalog for geospatial raster and vector data"
+    "STAC_CATALOG_ID": "geospatial-stac",
+    "STAC_CATALOG_TITLE": "Geospatial STAC API",
+    "STAC_CATALOG_DESCRIPTION": "STAC catalog for geospatial raster and vector data",
+    "STAC_BASE_URL": ""
   },
   "Host": {
     "CORS": "*",
@@ -201,16 +238,20 @@ az functionapp config appsettings set \
   --name <your-function-app> \
   --resource-group <your-resource-group> \
   --settings \
-    POSTGIS_HOST="<your-postgresql-server>.postgres.database.azure.com" \
+    APP_NAME="<your-app-name>" \
+    APP_DESCRIPTION="<your-app-description>" \
+    POSTGIS_HOST="<your-server>.postgres.database.azure.com" \
     POSTGIS_PORT="5432" \
     POSTGIS_DATABASE="<your-database>" \
-    POSTGIS_USER="rmhpgflexreader" \
+    POSTGIS_USER="<your-managed-identity-name>" \
     USE_MANAGED_IDENTITY="true" \
-    AZURE_CLIENT_ID="1c79a2fe-42cb-4f30-8fe9-c1dfc04f142f" \
+    AZURE_CLIENT_ID="<your-managed-identity-client-id>" \
     OGC_SCHEMA="geo" \
     OGC_GEOMETRY_COLUMN="geom" \
     OGC_DEFAULT_LIMIT="100" \
-    OGC_MAX_LIMIT="10000"
+    OGC_MAX_LIMIT="10000" \
+    STAC_CATALOG_ID="<your-stac-catalog-id>" \
+    STAC_CATALOG_TITLE="<your-stac-catalog-title>"
 ```
 
 ---
@@ -242,7 +283,7 @@ func azure functionapp logstream <your-function-app>
 ```json
 {
   "USE_MANAGED_IDENTITY": "false",
-  "POSTGIS_PASSWORD": "dev-password",
+  "POSTGIS_PASSWORD": "<your-dev-password>",
   "OGC_ENABLE_VALIDATION": "true"
 }
 ```
@@ -252,7 +293,7 @@ func azure functionapp logstream <your-function-app>
 ```json
 {
   "USE_MANAGED_IDENTITY": "true",
-  "AZURE_CLIENT_ID": "1c79a2fe-42cb-4f30-8fe9-c1dfc04f142f",
+  "AZURE_CLIENT_ID": "<your-managed-identity-client-id>",
   "OGC_ENABLE_VALIDATION": "false"
 }
 ```

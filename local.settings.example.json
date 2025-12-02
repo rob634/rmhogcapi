@@ -4,11 +4,15 @@
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "python",
 
+    "_comment_app": "Application Identity (for health checks and API responses)",
+    "APP_NAME": "ogcapi",
+    "APP_DESCRIPTION": "OGC Features & STAC API Service",
+
     "_comment_postgres": "PostgreSQL Connection Settings",
-    "POSTGIS_HOST": "rmhpgflex.postgres.database.azure.com",
+    "POSTGIS_HOST": "<your-server>.postgres.database.azure.com",
     "POSTGIS_PORT": "5432",
-    "POSTGIS_DATABASE": "geopgflex",
-    "POSTGIS_USER": "rob634",
+    "POSTGIS_DATABASE": "<your-database>",
+    "POSTGIS_USER": "<your-db-user>",
     "POSTGIS_PASSWORD": "YOUR_PASSWORD_HERE",
 
     "_comment_auth": "Authentication Mode - Choose ONE:",
@@ -18,8 +22,8 @@
 
     "_comment_identity": "User-Assigned Managed Identity (for Azure production)",
     "_comment_identity_1": "  AZURE_CLIENT_ID: Client ID of user-assigned managed identity",
-    "_comment_identity_2": "  When enabled, POSTGIS_USER should be the identity name (e.g., rmhtitileridentity)",
-    "_comment_identity_3": "  This allows sharing a single read-only identity across TiTiler, rmhogcapi, etc.",
+    "_comment_identity_2": "  When enabled, POSTGIS_USER should be the identity name (e.g., pgflexreader)",
+    "_comment_identity_3": "  This allows sharing a single read-only identity across multiple apps",
     "AZURE_CLIENT_ID": "",
 
     "_comment_ogc": "OGC Features API Configuration",
@@ -30,9 +34,12 @@
     "OGC_DEFAULT_PRECISION": "6",
     "OGC_ENABLE_VALIDATION": "true",
     "OGC_QUERY_TIMEOUT": "30",
-
-    "_comment_optional": "Optional Settings",
     "OGC_BASE_URL": "",
+
+    "_comment_stac": "STAC API Configuration",
+    "STAC_CATALOG_ID": "geospatial-stac",
+    "STAC_CATALOG_TITLE": "Geospatial STAC API",
+    "STAC_CATALOG_DESCRIPTION": "STAC catalog for geospatial raster and vector data",
     "STAC_BASE_URL": ""
   },
   "Host": {
