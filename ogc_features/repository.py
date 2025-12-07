@@ -49,6 +49,78 @@ from .config import OGCFeaturesConfig, get_ogc_config
 # Setup logging
 logger = logging.getLogger(__name__)
 
+# Cache for schema availability (reset on cold start)
+_geo_schema_available: Optional[bool] = None
+
+
+def is_geo_schema_available(force_check: bool = False) -> bool:
+    """
+    Check if geo schema is available and properly configured.
+
+    Uses cached result for performance (schema existence doesn't change
+    during function app lifetime). Use force_check=True to refresh.
+
+    Args:
+        force_check: If True, bypass cache and check database
+
+    Returns:
+        True if geo schema exists and has geometry_columns view accessible
+    """
+    global _geo_schema_available
+
+    if _geo_schema_available is not None and not force_check:
+        return _geo_schema_available
+
+    try:
+        config = get_ogc_config()
+        conn = psycopg.connect(config.get_connection_string(), row_factory=dict_row)
+
+        try:
+            with conn.cursor() as cur:
+                # Check schema exists
+                cur.execute(
+                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s",
+                    (config.ogc_schema,)
+                )
+                if not cur.fetchone():
+                    logger.warning(f"geo schema '{config.ogc_schema}' does not exist")
+                    _geo_schema_available = False
+                    return False
+
+                # Check geometry_columns view is accessible (PostGIS installed)
+                cur.execute("""
+                    SELECT COUNT(*) as cnt FROM geometry_columns
+                    WHERE f_table_schema = %s
+                """, (config.ogc_schema,))
+                result = cur.fetchone()
+
+                _geo_schema_available = True
+                logger.info(f"geo schema '{config.ogc_schema}' is available with {result['cnt']} geometry tables")
+                return True
+
+        finally:
+            conn.close()
+
+    except Exception as e:
+        logger.error(f"Error checking geo schema availability: {e}")
+        _geo_schema_available = False
+        return False
+
+
+def get_geo_unavailable_error() -> dict:
+    """
+    Return a standardized error response when geo schema is not available.
+
+    Returns:
+        Error dict with user-friendly message
+    """
+    config = get_ogc_config()
+    return {
+        'error': f"OGC Features API is not available: '{config.ogc_schema}' database schema has not been configured",
+        'error_type': 'ServiceUnavailable',
+        'status_code': 503
+    }
+
 
 class OGCFeaturesRepository:
     """

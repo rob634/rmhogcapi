@@ -40,16 +40,16 @@ def get_openapi_spec(base_url: str) -> Dict[str, Any]:
         spec = get_openapi_spec("https://myapi.com")
         # spec["openapi"] == "3.0.3"
     """
+    from stac_api.config import get_stac_config
+    config = get_stac_config()
+
     return {
         "openapi": "3.0.3",
         "info": {
-            "title": "RMH Geospatial STAC API",
-            "description": "STAC API v1.0.0 for geospatial raster and vector metadata catalog. "
+            "title": config.catalog_title,
+            "description": f"STAC API v1.0.0 - {config.catalog_description}. "
                           "Provides standards-compliant access to SpatioTemporal Asset Catalog collections and items.",
             "version": "1.0.0",
-            "contact": {
-                "name": "RMH Geospatial"
-            },
             "license": {
                 "name": "Proprietary"
             }

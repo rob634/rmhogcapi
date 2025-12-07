@@ -39,6 +39,75 @@ from infrastructure.postgresql import PostgreSQLRepository
 # Logger setup
 logger = logging.getLogger(__name__)
 
+# Cache for schema availability (reset on cold start)
+_pgstac_available: Optional[bool] = None
+
+
+def is_pgstac_available(force_check: bool = False) -> bool:
+    """
+    Check if pgstac schema is available and properly configured.
+
+    Uses cached result for performance (schema existence doesn't change
+    during function app lifetime). Use force_check=True to refresh.
+
+    Args:
+        force_check: If True, bypass cache and check database
+
+    Returns:
+        True if pgstac schema exists and has required tables
+    """
+    global _pgstac_available
+
+    if _pgstac_available is not None and not force_check:
+        return _pgstac_available
+
+    try:
+        repo = PostgreSQLRepository(schema_name='pgstac')
+        with repo._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Check schema exists
+                cur.execute(
+                    "SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s",
+                    ('pgstac',)
+                )
+                if not cur.fetchone():
+                    logger.warning("pgstac schema does not exist")
+                    _pgstac_available = False
+                    return False
+
+                # Check collections table exists
+                cur.execute("""
+                    SELECT table_name FROM information_schema.tables
+                    WHERE table_schema = 'pgstac' AND table_name = 'collections'
+                """)
+                if not cur.fetchone():
+                    logger.warning("pgstac.collections table does not exist")
+                    _pgstac_available = False
+                    return False
+
+                _pgstac_available = True
+                logger.info("pgstac schema is available and configured")
+                return True
+
+    except Exception as e:
+        logger.error(f"Error checking pgstac availability: {e}")
+        _pgstac_available = False
+        return False
+
+
+def get_pgstac_unavailable_error() -> Dict[str, Any]:
+    """
+    Return a standardized error response when pgstac is not available.
+
+    Returns:
+        Error dict with user-friendly message
+    """
+    return {
+        'error': 'STAC API is not available: pgstac database schema has not been configured',
+        'error_type': 'ServiceUnavailable',
+        'status_code': 503
+    }
+
 
 def get_collection(collection_id: str, repo: Optional[PostgreSQLRepository] = None) -> Dict[str, Any]:
     """

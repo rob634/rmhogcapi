@@ -62,11 +62,14 @@ Date: 29 OCT 2025
 from .config import OGCFeaturesConfig, get_ogc_config
 from .service import OGCFeaturesService
 from .triggers import get_ogc_triggers
+from .repository import is_geo_schema_available, get_geo_unavailable_error
 
 __version__ = "1.0.0"
 __all__ = [
     "OGCFeaturesConfig",
     "OGCFeaturesService",
     "get_ogc_triggers",
-    "get_ogc_config"
+    "get_ogc_config",
+    "is_geo_schema_available",
+    "get_geo_unavailable_error"
 ]

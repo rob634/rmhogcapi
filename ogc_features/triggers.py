@@ -63,6 +63,10 @@ from pydantic import ValidationError
 # Setup logging
 logger = logging.getLogger(__name__)
 
+# Schema availability check - cached at module level
+_schema_check_done = False
+_schema_available = False
+
 
 # ============================================================================
 # TRIGGER REGISTRY FUNCTION
@@ -134,6 +138,7 @@ class BaseOGCTrigger:
     Base class for OGC Features API triggers.
 
     Provides common functionality:
+    - Schema availability checking (geo schema must exist)
     - Base URL extraction from request
     - JSON response formatting
     - Error handling
@@ -144,6 +149,59 @@ class BaseOGCTrigger:
         """Initialize trigger with service."""
         self.config = get_ogc_config()
         self.service = OGCFeaturesService(self.config)
+        self._requires_database = True  # Override in subclasses that don't need DB
+
+    def _check_schema_available(self) -> Optional[func.HttpResponse]:
+        """
+        Check if geo schema is available.
+
+        Returns:
+            None if schema is available, error HttpResponse if not
+        """
+        global _schema_check_done, _schema_available
+
+        # Skip check for endpoints that don't require database
+        if not self._requires_database:
+            return None
+
+        # Use cached result if available
+        if _schema_check_done:
+            if _schema_available:
+                return None
+            else:
+                return self._service_unavailable_response()
+
+        # Perform the check
+        try:
+            from .repository import is_geo_schema_available
+            _schema_available = is_geo_schema_available()
+            _schema_check_done = True
+
+            if not _schema_available:
+                logger.warning("OGC Features API request rejected: geo schema not configured")
+                return self._service_unavailable_response()
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error checking geo schema availability: {e}")
+            _schema_check_done = True
+            _schema_available = False
+            return self._service_unavailable_response()
+
+    def _service_unavailable_response(self) -> func.HttpResponse:
+        """
+        Return 503 Service Unavailable when geo schema is not configured.
+        """
+        error_body = {
+            "code": "ServiceUnavailable",
+            "description": f"OGC Features API is not available: '{self.config.ogc_schema}' database schema has not been configured"
+        }
+        return func.HttpResponse(
+            body=json.dumps(error_body, indent=2),
+            status_code=503,
+            mimetype="application/json"
+        )
 
     def _get_base_url(self, req: func.HttpRequest) -> str:
         """
@@ -231,7 +289,13 @@ class OGCLandingPageTrigger(BaseOGCTrigger):
     Landing page trigger.
 
     Endpoint: GET /api/features
+
+    Note: Landing page is static - no database needed.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._requires_database = False  # Static response, no DB needed
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
         """
@@ -265,7 +329,13 @@ class OGCConformanceTrigger(BaseOGCTrigger):
     Conformance classes trigger.
 
     Endpoint: GET /api/features/conformance
+
+    Note: Conformance is static - no database needed.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._requires_database = False  # Static response, no DB needed
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
         """
@@ -298,6 +368,8 @@ class OGCCollectionsTrigger(BaseOGCTrigger):
     Collections list trigger.
 
     Endpoint: GET /api/features/collections
+
+    Requires database: queries geometry_columns view.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -310,6 +382,11 @@ class OGCCollectionsTrigger(BaseOGCTrigger):
         Returns:
             HttpResponse with collections list JSON
         """
+        # Check if geo schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             base_url = self._get_base_url(req)
             collections = self.service.list_collections(base_url)
@@ -332,6 +409,8 @@ class OGCCollectionTrigger(BaseOGCTrigger):
     Single collection metadata trigger.
 
     Endpoint: GET /api/features/collections/{collection_id}
+
+    Requires database: queries geometry_columns and collection metadata.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -344,6 +423,11 @@ class OGCCollectionTrigger(BaseOGCTrigger):
         Returns:
             HttpResponse with collection metadata JSON
         """
+        # Check if geo schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract collection_id from route parameters
             collection_id = req.route_params.get('collection_id')
@@ -393,6 +477,8 @@ class OGCItemsTrigger(BaseOGCTrigger):
     - precision: Coordinate precision (0-15, default 6)
     - simplify: Simplification tolerance in meters
     - <property>=<value>: Attribute filters (simple equality)
+
+    Requires database: queries PostGIS tables.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -405,6 +491,11 @@ class OGCItemsTrigger(BaseOGCTrigger):
         Returns:
             HttpResponse with GeoJSON FeatureCollection
         """
+        # Check if geo schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract collection_id from route
             collection_id = req.route_params.get('collection_id')
@@ -562,6 +653,8 @@ class OGCItemTrigger(BaseOGCTrigger):
     Single feature trigger.
 
     Endpoint: GET /api/features/collections/{collection_id}/items/{feature_id}
+
+    Requires database: queries PostGIS tables.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -574,6 +667,11 @@ class OGCItemTrigger(BaseOGCTrigger):
         Returns:
             HttpResponse with GeoJSON Feature
         """
+        # Check if geo schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract route parameters
             collection_id = req.route_params.get('collection_id')

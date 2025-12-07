@@ -423,6 +423,15 @@ def get_detailed_health() -> Dict[str, Any]:
 
     SECURITY NOTE: Block this endpoint from external access via APIM policy.
 
+    Health Status Logic:
+    - UNHEALTHY: Database connectivity fails (critical)
+    - DEGRADED: One or both schemas missing (APIs partially available)
+    - HEALTHY: All components operational
+
+    This allows the app to function as two independent APIs:
+    - OGC Features can work without pgstac schema
+    - STAC API can work without geo schema
+
     Returns:
         Dict with full health metrics
     """
@@ -433,23 +442,25 @@ def get_detailed_health() -> Dict[str, Any]:
     critical_failures = []
     non_critical_failures = []
 
-    # Critical: Database connectivity
+    # Critical: Database connectivity (required for ANY functionality)
     db_result = check_database_connectivity()
     checks["database"] = db_result.to_dict()
     if db_result.status == "fail":
         critical_failures.append("database")
 
-    # Critical: Geo schema (OGC Features)
+    # Non-critical: Geo schema (OGC Features API)
+    # Missing geo schema = OGC Features unavailable, but STAC can still work
     geo_result = check_geo_schema()
     checks["geo_schema"] = geo_result.to_dict()
     if geo_result.status == "fail":
-        critical_failures.append("geo_schema")
+        non_critical_failures.append("geo_schema")
 
-    # Critical: PgSTAC schema (STAC API)
+    # Non-critical: PgSTAC schema (STAC API)
+    # Missing pgstac schema = STAC unavailable, but OGC Features can still work
     pgstac_result = check_pgstac_schema()
     checks["pgstac_schema"] = pgstac_result.to_dict()
     if pgstac_result.status == "fail":
-        critical_failures.append("pgstac_schema")
+        non_critical_failures.append("pgstac_schema")
 
     # Non-critical: API modules
     modules_result = check_api_modules()
@@ -458,6 +469,7 @@ def get_detailed_health() -> Dict[str, Any]:
         non_critical_failures.append("api_modules")
 
     # Determine overall status
+    # Only database failure is critical - schema failures are degraded
     if critical_failures:
         status = HealthStatus.UNHEALTHY
     elif non_critical_failures:

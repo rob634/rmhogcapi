@@ -28,12 +28,16 @@ Updated: 11 NOV 2025 - Added all STAC v1.0.0 endpoints
 import azure.functions as func
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .config import get_stac_config
 from .service import STACAPIService
 
 logger = logging.getLogger(__name__)
+
+# Schema availability check - imported at module level for caching
+_schema_check_done = False
+_schema_available = False
 
 
 # ============================================================================
@@ -111,6 +115,7 @@ class BaseSTACTrigger:
     Base class for STAC API triggers.
 
     Provides common functionality:
+    - Schema availability checking (pgstac must exist)
     - Base URL extraction from request
     - JSON response formatting
     - Error handling
@@ -121,6 +126,59 @@ class BaseSTACTrigger:
         """Initialize trigger with service."""
         self.config = get_stac_config()
         self.service = STACAPIService(self.config)
+        self._requires_database = True  # Override in subclasses that don't need DB
+
+    def _check_schema_available(self) -> Optional[func.HttpResponse]:
+        """
+        Check if pgstac schema is available.
+
+        Returns:
+            None if schema is available, error HttpResponse if not
+        """
+        global _schema_check_done, _schema_available
+
+        # Skip check for endpoints that don't require database
+        if not self._requires_database:
+            return None
+
+        # Use cached result if available
+        if _schema_check_done:
+            if _schema_available:
+                return None
+            else:
+                return self._service_unavailable_response()
+
+        # Perform the check
+        try:
+            from infrastructure.stac_queries import is_pgstac_available
+            _schema_available = is_pgstac_available()
+            _schema_check_done = True
+
+            if not _schema_available:
+                logger.warning("STAC API request rejected: pgstac schema not configured")
+                return self._service_unavailable_response()
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error checking pgstac availability: {e}")
+            _schema_check_done = True
+            _schema_available = False
+            return self._service_unavailable_response()
+
+    def _service_unavailable_response(self) -> func.HttpResponse:
+        """
+        Return 503 Service Unavailable when pgstac schema is not configured.
+        """
+        error_body = {
+            "code": "ServiceUnavailable",
+            "description": "STAC API is not available: pgstac database schema has not been configured"
+        }
+        return func.HttpResponse(
+            body=json.dumps(error_body, indent=2),
+            status_code=503,
+            mimetype="application/json"
+        )
 
     def _get_base_url(self, req: func.HttpRequest) -> str:
         """
@@ -208,7 +266,13 @@ class STACLandingPageTrigger(BaseSTACTrigger):
     Landing page trigger.
 
     Endpoint: GET /api/stac
+
+    Note: Landing page doesn't require database - returns static catalog info.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._requires_database = False  # Static response, no DB needed
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
         """
@@ -243,7 +307,13 @@ class STACConformanceTrigger(BaseSTACTrigger):
     Conformance classes trigger.
 
     Endpoint: GET /api/stac/conformance
+
+    Note: Conformance is static - no database needed.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._requires_database = False  # Static response, no DB needed
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
         """
@@ -280,7 +350,13 @@ class STACOpenAPITrigger(BaseSTACTrigger):
 
     Required by STAC API Core conformance class.
     Returns OpenAPI 3.0 specification document.
+
+    Note: OpenAPI spec is static - no database needed.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._requires_database = False  # Static response, no DB needed
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
         """
@@ -319,6 +395,8 @@ class STACCollectionsTrigger(BaseSTACTrigger):
     Collections list trigger.
 
     Endpoint: GET /api/stac/collections
+
+    Requires database: queries pgstac.collections table.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -331,6 +409,11 @@ class STACCollectionsTrigger(BaseSTACTrigger):
         Returns:
             STAC collections JSON response
         """
+        # Check if pgstac schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             logger.info("STAC API Collections list requested")
 
@@ -365,6 +448,8 @@ class STACCollectionDetailTrigger(BaseSTACTrigger):
     Collection detail trigger.
 
     Endpoint: GET /api/stac/collections/{collection_id}
+
+    Requires database: queries pgstac.collections table.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -377,6 +462,11 @@ class STACCollectionDetailTrigger(BaseSTACTrigger):
         Returns:
             STAC collection JSON response
         """
+        # Check if pgstac schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract collection_id from route params
             collection_id = req.route_params.get('collection_id')
@@ -419,6 +509,8 @@ class STACItemsTrigger(BaseSTACTrigger):
 
     Endpoint: GET /api/stac/collections/{collection_id}/items
     Query params: limit, offset, bbox
+
+    Requires database: queries pgstac.items table.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -431,6 +523,11 @@ class STACItemsTrigger(BaseSTACTrigger):
         Returns:
             STAC items FeatureCollection JSON response
         """
+        # Check if pgstac schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract collection_id from route params
             collection_id = req.route_params.get('collection_id')
@@ -507,6 +604,8 @@ class STACItemDetailTrigger(BaseSTACTrigger):
     Item detail trigger.
 
     Endpoint: GET /api/stac/collections/{collection_id}/items/{item_id}
+
+    Requires database: queries pgstac.items table.
     """
 
     def handle(self, req: func.HttpRequest) -> func.HttpResponse:
@@ -519,6 +618,11 @@ class STACItemDetailTrigger(BaseSTACTrigger):
         Returns:
             STAC item JSON response
         """
+        # Check if pgstac schema is available
+        unavailable_response = self._check_schema_available()
+        if unavailable_response:
+            return unavailable_response
+
         try:
             # Extract route params
             collection_id = req.route_params.get('collection_id')

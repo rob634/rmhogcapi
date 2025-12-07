@@ -205,8 +205,11 @@ def health_detailed(req: func.HttpRequest) -> func.HttpResponse:
 # Application Startup
 # ============================================================================
 
+from health import get_app_identity
+_app_identity = get_app_identity()
+
 logger.info("="*60)
-logger.info("rmhogcapi - OGC Features & STAC API Service")
+logger.info(f"{_app_identity['name']} - {_app_identity['description']}")
 logger.info("="*60)
 logger.info("Function App initialized successfully")
 logger.info("Available endpoints:")
