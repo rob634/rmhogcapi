@@ -302,6 +302,132 @@ def check_pgstac_schema() -> CheckResult:
         )
 
 
+def check_user_permissions() -> CheckResult:
+    """
+    Validate POSTGIS_USER has required permissions on OGC_SCHEMA.
+
+    Checks:
+    1. Schema exists in database
+    2. USAGE privilege on schema
+    3. SELECT privilege on tables in schema
+
+    This is a non-critical check - failure means DEGRADED status.
+
+    Returns:
+        CheckResult with permission validation status
+    """
+    start_time = time.perf_counter()
+
+    try:
+        conn_string = get_postgres_connection_string()
+        config = get_app_config()
+        ogc_schema = os.getenv("OGC_SCHEMA", "geo")
+        db_user = config.postgis_user
+
+        with psycopg.connect(conn_string) as conn:
+            with conn.cursor() as cur:
+                # Check schema USAGE permission
+                cur.execute(
+                    "SELECT has_schema_privilege(%s, %s, 'USAGE') as has_usage",
+                    (db_user, ogc_schema)
+                )
+                row = cur.fetchone()
+                has_usage = row[0] if row else False
+
+                if not has_usage:
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    return CheckResult(
+                        status="fail",
+                        latency_ms=latency_ms,
+                        message=f"User '{db_user}' lacks USAGE privilege on schema '{ogc_schema}'",
+                        details={
+                            "user": db_user,
+                            "schema": ogc_schema,
+                            "has_schema_usage": False,
+                            "error": "No USAGE privilege on schema"
+                        }
+                    )
+
+                # Check table SELECT permissions (sample up to 5 tables)
+                cur.execute("""
+                    SELECT
+                        t.tablename,
+                        has_table_privilege(%s, %s || '.' || t.tablename, 'SELECT') as can_select
+                    FROM pg_tables t
+                    WHERE t.schemaname = %s
+                    LIMIT 5
+                """, (db_user, ogc_schema, ogc_schema))
+
+                tables_checked = []
+                tables_readable = 0
+                sample_tables = []
+
+                for row in cur.fetchall():
+                    table_name, can_select = row
+                    tables_checked.append(table_name)
+                    sample_tables.append(table_name)
+                    if can_select:
+                        tables_readable += 1
+
+        latency_ms = (time.perf_counter() - start_time) * 1000
+
+        # All tables should be readable
+        if len(tables_checked) > 0 and tables_readable == len(tables_checked):
+            return CheckResult(
+                status="pass",
+                latency_ms=latency_ms,
+                message=f"User '{db_user}' has read access to schema '{ogc_schema}'",
+                details={
+                    "user": db_user,
+                    "schema": ogc_schema,
+                    "has_schema_usage": True,
+                    "tables_checked": len(tables_checked),
+                    "tables_readable": tables_readable,
+                    "sample_tables": sample_tables
+                }
+            )
+        elif len(tables_checked) == 0:
+            return CheckResult(
+                status="pass",
+                latency_ms=latency_ms,
+                message=f"User '{db_user}' has USAGE on schema '{ogc_schema}' (no tables to check)",
+                details={
+                    "user": db_user,
+                    "schema": ogc_schema,
+                    "has_schema_usage": True,
+                    "tables_checked": 0,
+                    "tables_readable": 0,
+                    "sample_tables": []
+                }
+            )
+        else:
+            return CheckResult(
+                status="fail",
+                latency_ms=latency_ms,
+                message=f"User '{db_user}' lacks SELECT on some tables in '{ogc_schema}'",
+                details={
+                    "user": db_user,
+                    "schema": ogc_schema,
+                    "has_schema_usage": True,
+                    "tables_checked": len(tables_checked),
+                    "tables_readable": tables_readable,
+                    "sample_tables": sample_tables,
+                    "error": f"Only {tables_readable}/{len(tables_checked)} tables readable"
+                }
+            )
+
+    except Exception as e:
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.error(f"User permissions check failed: {e}")
+
+        return CheckResult(
+            status="fail",
+            latency_ms=latency_ms,
+            message=f"Permission check failed: {type(e).__name__}",
+            details={"error": str(e)}
+        )
+
+
 def check_api_modules() -> CheckResult:
     """
     Check API module availability.
@@ -467,6 +593,12 @@ def get_detailed_health() -> Dict[str, Any]:
     checks["api_modules"] = modules_result.to_dict()
     if modules_result.status == "fail":
         non_critical_failures.append("api_modules")
+
+    # Non-critical: User permissions on OGC schema
+    permissions_result = check_user_permissions()
+    checks["user_permissions"] = permissions_result.to_dict()
+    if permissions_result.status == "fail":
+        non_critical_failures.append("user_permissions")
 
     # Determine overall status
     # Only database failure is critical - schema failures are degraded
