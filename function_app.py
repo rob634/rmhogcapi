@@ -12,22 +12,24 @@
 Azure Functions Entry Point for rmhogcapi
 
 This module serves as the main entry point for the Azure Functions runtime.
-It registers all HTTP triggers for both OGC Features API and STAC API.
+It registers all HTTP triggers for OGC Features, STAC, Raster, and xarray APIs.
 
 Architecture:
     - OGC Features API: 6 endpoints serving PostGIS vector data (geo schema)
     - STAC API: 7 endpoints serving STAC catalog metadata (pgstac schema)
+    - Raster API: 4 endpoints for raster operations via TiTiler
+    - xarray API: 3 endpoints for Zarr time-series operations
     - Health checks: 2 endpoints for monitoring and APIM integration
         - /api/health - Public (minimal response for external callers)
         - /api/health/detailed - Internal (full metrics for APIM probes)
 
-Total: 15 HTTP endpoints (13 API + 2 health check)
+Total: 22 HTTP endpoints (20 API + 2 health check)
 
 Deployment:
     - Local: func start
     - Azure: func azure functionapp publish rmhogcapi --python --build remote
 
-Updated: 24 NOV 2025 - Production health checks with APIM integration
+Updated: 19 DEC 2025 - Added Raster API and xarray API (Reader Migration)
 """
 
 import azure.functions as func
@@ -142,6 +144,82 @@ except ImportError as e:
     logger.warning("STAC API will not be available")
 
 # ============================================================================
+# Raster API - 4 Endpoints (Added 19 DEC 2025)
+# ============================================================================
+
+try:
+    from raster_api.triggers import (
+        RasterExtractTrigger,
+        RasterPointTrigger,
+        RasterClipTrigger,
+        RasterPreviewTrigger
+    )
+
+    logger.info("Registering Raster API endpoints...")
+
+    _raster_extract = RasterExtractTrigger()
+    _raster_point = RasterPointTrigger()
+    _raster_clip = RasterClipTrigger()
+    _raster_preview = RasterPreviewTrigger()
+
+    @app.route(route="raster/extract/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def raster_extract(req: func.HttpRequest) -> func.HttpResponse:
+        return _raster_extract.handle(req)
+
+    @app.route(route="raster/point/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def raster_point(req: func.HttpRequest) -> func.HttpResponse:
+        return _raster_point.handle(req)
+
+    @app.route(route="raster/clip/{collection}/{item}", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+    def raster_clip(req: func.HttpRequest) -> func.HttpResponse:
+        return _raster_clip.handle(req)
+
+    @app.route(route="raster/preview/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def raster_preview(req: func.HttpRequest) -> func.HttpResponse:
+        return _raster_preview.handle(req)
+
+    logger.info("✅ Raster API registered successfully (4 endpoints)")
+
+except ImportError as e:
+    logger.warning(f"⚠️ Raster API module not available: {e}")
+    logger.warning("Raster API will not be available")
+
+# ============================================================================
+# xarray API - 3 Endpoints (Added 19 DEC 2025)
+# ============================================================================
+
+try:
+    from xarray_api.triggers import (
+        XarrayPointTrigger,
+        XarrayStatisticsTrigger,
+        XarrayAggregateTrigger
+    )
+
+    logger.info("Registering xarray API endpoints...")
+
+    _xarray_point = XarrayPointTrigger()
+    _xarray_stats = XarrayStatisticsTrigger()
+    _xarray_agg = XarrayAggregateTrigger()
+
+    @app.route(route="xarray/point/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def xarray_point(req: func.HttpRequest) -> func.HttpResponse:
+        return _xarray_point.handle(req)
+
+    @app.route(route="xarray/statistics/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def xarray_statistics(req: func.HttpRequest) -> func.HttpResponse:
+        return _xarray_stats.handle(req)
+
+    @app.route(route="xarray/aggregate/{collection}/{item}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+    def xarray_aggregate(req: func.HttpRequest) -> func.HttpResponse:
+        return _xarray_agg.handle(req)
+
+    logger.info("✅ xarray API registered successfully (3 endpoints)")
+
+except ImportError as e:
+    logger.warning(f"⚠️ xarray API module not available: {e}")
+    logger.warning("xarray API will not be available")
+
+# ============================================================================
 # Health Check Endpoints - 2 Endpoints (Public + Detailed)
 # ============================================================================
 
@@ -232,4 +310,15 @@ logger.info("  - GET /api/stac/collections - List collections")
 logger.info("  - GET /api/stac/collections/{id} - Collection metadata")
 logger.info("  - GET /api/stac/collections/{id}/items - Query items")
 logger.info("  - GET /api/stac/collections/{id}/items/{item_id} - Single item")
+logger.info("")
+logger.info("Raster API (4 endpoints):")
+logger.info("  - GET /api/raster/extract/{collection}/{item} - Extract bbox as image")
+logger.info("  - GET /api/raster/point/{collection}/{item} - Point value query")
+logger.info("  - GET/POST /api/raster/clip/{collection}/{item} - Clip to geometry")
+logger.info("  - GET /api/raster/preview/{collection}/{item} - Preview image")
+logger.info("")
+logger.info("xarray API (3 endpoints):")
+logger.info("  - GET /api/xarray/point/{collection}/{item} - Time-series at point")
+logger.info("  - GET /api/xarray/statistics/{collection}/{item} - Regional stats")
+logger.info("  - GET /api/xarray/aggregate/{collection}/{item} - Temporal aggregation")
 logger.info("="*60)
