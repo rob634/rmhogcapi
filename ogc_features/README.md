@@ -144,7 +144,7 @@ func azure functionapp publish my-ogc-api --python --build remote
 
 ```bash
 # PostgreSQL Connection
-POSTGIS_HOST=rmhpgflex.postgres.database.azure.com
+POSTGIS_HOST=rmhpostgres.postgres.database.azure.com
 POSTGIS_DATABASE=postgres
 POSTGIS_USER=your_user
 POSTGIS_PASSWORD=your_password

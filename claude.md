@@ -67,7 +67,7 @@ The geospatial data served by these APIs is created by the **rmhgeoapi** ETL pip
 - **Silver**: Processed COGs + PostGIS tables (production ready)
 - **Gold**: GeoParquet exports (future)
 
-**Database Schema (PostgreSQL - rmhpgflex.postgres.database.azure.com):**
+**Database Schema (PostgreSQL - rmhpostgres.postgres.database.azure.com):**
 - `app` schema: CoreMachine jobs and tasks
 - `platform` schema: Orchestration and dataset tracking
 - `geo` schema: PostGIS vector features (served by OGC Features API)
@@ -118,7 +118,7 @@ All connect to: PostgreSQL (shared database, separate schemas)
 ### Phase 1: Project Setup
 - [ ] Initialize Azure Function App project structure
 - [ ] Configure Python runtime and dependencies
-- [ ] Set up connection to PostgreSQL (rmhpgflex)
+- [ ] Set up connection to PostgreSQL (rmhpostgres)
 - [ ] Configure environment variables and secrets
 
 ### Phase 2: OGC Features API Migration
@@ -172,7 +172,7 @@ All connect to: PostgreSQL (shared database, separate schemas)
 - Consumption or Basic tier (TBD)
 
 **Database:**
-- PostgreSQL (rmhpgflex.postgres.database.azure.com)
+- PostgreSQL (rmhpostgres.postgres.database.azure.com)
 - PostGIS extension (geo schema)
 - pgstac extension (pgstac schema)
 - psycopg3 for connection management
@@ -194,10 +194,10 @@ All connect to: PostgreSQL (shared database, separate schemas)
 ## 🔑 Key URLs & Resources
 
 **Database Connection:**
-- Host: `rmhpgflex.postgres.database.azure.com`
+- Host: `rmhpostgres.postgres.database.azure.com`
 - Database: `geopgflex`
 - Schemas: `geo` (PostGIS), `pgstac` (STAC)
-- User: `rob634` (get password from Azure Key Vault)
+- User: `rmhpgflexreader` (managed identity) or `rob634` (password auth)
 
 **Resource Group:**
 - `rmhazure_rg`
